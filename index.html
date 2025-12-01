@@ -306,6 +306,15 @@
     <section id="googleSheets">
       <h2>Сохранение в Google Таблицы</h2>
       <p class="description">Ниже — готовый скрипт для Google Apps Script. Он принимает JSON, добавляет строки в таблицу и создаёт лист «Payouts» для итогов. Скопируйте код, вставьте в новый проект Apps Script, нажмите Deploy → New deployment → Web app, выберите «Anyone»/«Anyone with the link», получите URL и вставьте его в форму.</p>
+      <div class="stat" style="margin-top: 10px;">
+        <p class="stat-title">Готовые данные для вставки</p>
+        <p class="description" style="margin: 0;">
+          Deployment ID: <strong>AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa</strong><br />
+          URL веб‑приложения: <a href="https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec" target="_blank" rel="noreferrer">https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec</a><br />
+          Таблица по умолчанию: <a href="https://docs.google.com/spreadsheets/d/1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c/edit?usp=sharing" target="_blank" rel="noreferrer">1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c</a><br />
+          Библиотека Apps Script: <a href="https://script.google.com/macros/library/d/1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1" target="_blank" rel="noreferrer">1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1</a>
+        </p>
+      </div>
       <div class="grid-two">
         <div>
           <p class="stat-title" style="margin-bottom: 8px;">Код для Google Apps Script</p>
@@ -350,6 +359,14 @@ function doPost(e) {
           <p class="description" style="margin-top: 12px;">Отправится вся текущая выборка: ставки, смены и расчёт выплат. При повторной отправке строки добавляются ниже существующих — очистите листы в таблице, если нужно начать заново.</p>
         </div>
       </div>
+      <div class="stat" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="stat-title" style="margin: 0;">Альтернативные варианты</p>
+        <p class="description" style="margin: 0;">Если веб-приложение недоступно, можно скачать резервную копию и импортировать в Google Sheets/Excel вручную.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button id="downloadJson" type="button">Скачать JSON</button>
+          <button id="downloadCsv" type="button" class="secondary">Скачать CSV</button>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -376,6 +393,11 @@ function doPost(e) {
     const gsUrl = document.getElementById('gsUrl');
     const gsSheetId = document.getElementById('gsSheetId');
     const gsStatus = document.getElementById('gsStatus');
+    const downloadJsonBtn = document.getElementById('downloadJson');
+    const downloadCsvBtn = document.getElementById('downloadCsv');
+
+    const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec';
+    const DEFAULT_SHEET_ID = '1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c';
 
     const rates = new Map([
       ['Повар', 270],
@@ -564,6 +586,46 @@ function doPost(e) {
       return { shifts: shiftItems, payouts: payoutItems, rates: rateItems };
     }
 
+    function downloadFile(filename, content, mime = 'text/plain') {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson() {
+      const payload = collectData();
+      downloadFile('shifts-and-payouts.json', JSON.stringify(payload, null, 2), 'application/json');
+      gsStatus.textContent = 'Статус: скачан JSON для ручной загрузки.';
+    }
+
+    function toCsvRow(values) {
+      return values.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+    }
+
+    function downloadCsv() {
+      const payload = collectData();
+      const lines = [];
+
+      lines.push('Shifts');
+      lines.push(toCsvRow(['Дата', 'Сотрудник', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']));
+      payload.shifts.forEach((s) => {
+        lines.push(toCsvRow([s.date, s.name, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]));
+      });
+      lines.push('');
+      lines.push('Payouts');
+      lines.push(toCsvRow(['Сотрудник', 'Дата выплаты', 'Часы', 'Бонус/штраф', 'Итого']));
+      payload.payouts.forEach((p) => {
+        lines.push(toCsvRow([p.name, p.payoutDate, p.hours, p.bonus, p.total]));
+      });
+
+      downloadFile('shifts-and-payouts.csv', lines.join('\n'), 'text/csv');
+      gsStatus.textContent = 'Статус: скачан CSV для ручной загрузки.';
+    }
+
     async function sendToGoogleSheets(event) {
       event.preventDefault();
       if (!gsUrl.value || !gsSheetId.value) return;
@@ -625,6 +687,12 @@ function doPost(e) {
     });
 
     gsForm.addEventListener('submit', sendToGoogleSheets);
+    downloadJsonBtn.addEventListener('click', downloadJson);
+    downloadCsvBtn.addEventListener('click', downloadCsv);
+
+    // Предзаполняем доступы по умолчанию
+    gsUrl.value = DEFAULT_GS_URL;
+    gsSheetId.value = DEFAULT_SHEET_ID;
 
     // Демоданные для быстрого старта
     addShift({ date: '2024-11-26', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
