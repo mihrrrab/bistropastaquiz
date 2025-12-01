@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Учёт часов и выплат</title>
+  <style>
+    :root {
+      --border: #d6d8db;
+      --primary: #1f7a8c;
+      --muted: #6c757d;
+      --bg: #f8f9fa;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: #212529;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    section {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    h2 {
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 20px;
+    }
+
+    .description {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px 16px;
+      align-items: end;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input, select, button {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      font-family: inherit;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid rgba(31, 122, 140, 0.15);
+      border-color: var(--primary);
+    }
+
+    button {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      border: none;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(31, 122, 140, 0.25);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: #212529;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f3f5;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(odd) td {
+      background: #fcfcfd;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e8f5f7;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 12px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfefe;
+    }
+
+    .stat-title {
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 4px;
+    }
+
+    .stat-value {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    .totals strong { color: #212529; }
+
+    .pill {
+      padding: 2px 10px;
+      border-radius: 16px;
+      background: #eef0f3;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .danger { color: #c92a2a; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Учёт часов и выплат</h1>
+    <p class="subtitle">Две контрольные даты: 9 и 25 число месяца. Ставка привязана к должности, бонусы и штрафы учитываются отдельной строкой.</p>
+  </header>
+
+  <main>
+    <section id="rates">
+      <h2>Настройки ставок</h2>
+      <p class="description">Введите почасовые тарифы по должностям. Любая смена с указанной должностью возьмёт соответствующую ставку.</p>
+      <form id="rateForm">
+        <label>Должность
+          <select id="rateRole" required>
+            <option value="Повар">Повар</option>
+            <option value="Администратор">Администратор</option>
+          </select>
+        </label>
+        <label>Ставка, ₽/час
+          <input id="rateValue" type="number" min="0" step="10" required />
+        </label>
+        <button type="submit">Сохранить ставку</button>
+      </form>
+      <div class="grid-two" id="rateBadges"></div>
+    </section>
+
+    <section id="shift">
+      <h2>Добавить смену</h2>
+      <p class="description">Фиксируйте дату, время, сотрудника и должность. Автоматически рассчитаем часы и оплату.</p>
+      <form id="shiftForm">
+        <label>Дата
+          <input type="date" id="shiftDate" required />
+        </label>
+        <label>Сотрудник
+          <input type="text" id="shiftName" placeholder="Например, Софья" required />
+        </label>
+        <label>Должность
+          <select id="shiftRole" required>
+            <option value="Повар">Повар</option>
+            <option value="Администратор">Администратор</option>
+          </select>
+        </label>
+        <label>Начало смены
+          <input type="time" id="shiftStart" required />
+        </label>
+        <label>Конец смены
+          <input type="time" id="shiftEnd" required />
+        </label>
+        <label>Премия / штраф, ₽ (можно отрицательное)
+          <input type="number" id="shiftBonus" step="100" value="0" />
+        </label>
+        <button type="submit">Добавить</button>
+        <button type="button" class="secondary" id="resetForm">Очистить форму</button>
+      </form>
+    </section>
+
+    <section id="log">
+      <h2>Список смен</h2>
+      <div class="description">Часы считаются автоматически (пересчёт при изменении ставок). Можно удалить строку, если внесли неверные данные.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Дата</th>
+            <th>Сотрудник</th>
+            <th>Должность</th>
+            <th>Начало</th>
+            <th>Конец</th>
+            <th>Часы</th>
+            <th>Ставка</th>
+            <th>Премия/штраф</th>
+            <th>Оплата, ₽</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="shiftTable"></tbody>
+      </table>
+      <div class="totals" id="shiftTotals"></div>
+    </section>
+
+    <section id="payouts">
+      <h2>Сводка выплат</h2>
+      <p class="description">Рассчитываем по контрольным датам: 9 (за период 26 числа предыдущего месяца по 9 включительно) и 25 (за период 10–25). Суммируем часы, оплату и бонусы/штрафы по каждому сотруднику.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Сотрудник</th>
+            <th>Дата выплаты</th>
+            <th>Часы</th>
+            <th>Бонусы/штрафы</th>
+            <th>Итого к выдаче, ₽</th>
+          </tr>
+        </thead>
+        <tbody id="payoutTable"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const rateForm = document.getElementById('rateForm');
+    const rateRole = document.getElementById('rateRole');
+    const rateValue = document.getElementById('rateValue');
+    const rateBadges = document.getElementById('rateBadges');
+
+    const shiftForm = document.getElementById('shiftForm');
+    const shiftDate = document.getElementById('shiftDate');
+    const shiftName = document.getElementById('shiftName');
+    const shiftRole = document.getElementById('shiftRole');
+    const shiftStart = document.getElementById('shiftStart');
+    const shiftEnd = document.getElementById('shiftEnd');
+    const shiftBonus = document.getElementById('shiftBonus');
+    const resetForm = document.getElementById('resetForm');
+
+    const shiftTable = document.getElementById('shiftTable');
+    const shiftTotals = document.getElementById('shiftTotals');
+    const payoutTable = document.getElementById('payoutTable');
+
+    const rates = new Map([
+      ['Повар', 270],
+      ['Администратор', 250]
+    ]);
+
+    const shifts = [];
+
+    function formatCurrency(value) {
+      return value.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+    }
+
+    function renderRates() {
+      rateBadges.innerHTML = '';
+      rates.forEach((value, role) => {
+        const card = document.createElement('div');
+        card.className = 'stat';
+        card.innerHTML = `
+          <p class="stat-title">${role}</p>
+          <p class="stat-value">${formatCurrency(value)} ₽/час</p>
+        `;
+        rateBadges.appendChild(card);
+      });
+    }
+
+    function toMinutes(time) {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function calcHours(start, end) {
+      let diff = toMinutes(end) - toMinutes(start);
+      if (diff < 0) diff += 24 * 60; // переход через полночь
+      return Math.round((diff / 60) * 100) / 100;
+    }
+
+    function determinePayout(date) {
+      const d = new Date(date);
+      const day = d.getDate();
+      const month = d.getMonth();
+      const year = d.getFullYear();
+
+      // Период 26 числа по 9 число: выплата 9 числа следующего/текущего месяца
+      if (day >= 26) {
+        const payoutDate = new Date(year, month + 1, 9);
+        return payoutDate;
+      }
+
+      if (day <= 9) {
+        const payoutDate = new Date(year, month, 9);
+        return payoutDate;
+      }
+
+      // Иначе период 10-25 -> выплата 25 числа текущего месяца
+      return new Date(year, month, 25);
+    }
+
+    function addShift(entry) {
+      shifts.push(entry);
+      renderShifts();
+      renderPayouts();
+    }
+
+    function deleteShift(index) {
+      shifts.splice(index, 1);
+      renderShifts();
+      renderPayouts();
+    }
+
+    function renderShifts() {
+      shiftTable.innerHTML = '';
+      let totalHours = 0;
+      let totalPay = 0;
+
+      shifts.forEach((shift, index) => {
+        const hours = calcHours(shift.start, shift.end);
+        const rate = rates.get(shift.role) || 0;
+        const pay = Math.round(hours * rate + Number(shift.bonus));
+
+        totalHours += hours;
+        totalPay += pay;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${shift.date}</td>
+          <td>${shift.name}</td>
+          <td><span class="chip">${shift.role}</span></td>
+          <td>${shift.start}</td>
+          <td>${shift.end}</td>
+          <td>${hours.toFixed(2)}</td>
+          <td>${formatCurrency(rate)} ₽</td>
+          <td class="${shift.bonus < 0 ? 'danger' : ''}">${formatCurrency(Number(shift.bonus))} ₽</td>
+          <td>${formatCurrency(pay)} ₽</td>
+          <td><button class="secondary" onclick="deleteShift(${index})">Удалить</button></td>
+        `;
+        shiftTable.appendChild(row);
+      });
+
+      shiftTotals.innerHTML = `
+        <span class="pill">Смен: ${shifts.length}</span>
+        <span><strong>${totalHours.toFixed(2)}</strong> ч</span>
+        <span><strong>${formatCurrency(Math.round(totalPay))}</strong> ₽ всего</span>
+      `;
+    }
+
+    function renderPayouts() {
+      const payouts = new Map();
+
+      shifts.forEach((shift) => {
+        const hours = calcHours(shift.start, shift.end);
+        const rate = rates.get(shift.role) || 0;
+        const base = hours * rate;
+        const bonus = Number(shift.bonus) || 0;
+        const total = base + bonus;
+
+        const payoutDate = determinePayout(shift.date);
+        const key = `${shift.name}|${payoutDate.toISOString().slice(0, 10)}`;
+
+        if (!payouts.has(key)) {
+          payouts.set(key, {
+            name: shift.name,
+            payoutDate,
+            hours: 0,
+            bonus: 0,
+            total: 0
+          });
+        }
+
+        const agg = payouts.get(key);
+        agg.hours += hours;
+        agg.bonus += bonus;
+        agg.total += total;
+      });
+
+      payoutTable.innerHTML = '';
+
+      Array.from(payouts.values())
+        .sort((a, b) => a.payoutDate - b.payoutDate || a.name.localeCompare(b.name))
+        .forEach((payout) => {
+          const row = document.createElement('tr');
+          const payoutLabel = payout.payoutDate.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          });
+          row.innerHTML = `
+            <td>${payout.name}</td>
+            <td>${payoutLabel}</td>
+            <td>${payout.hours.toFixed(2)} ч</td>
+            <td class="${payout.bonus < 0 ? 'danger' : ''}">${formatCurrency(Math.round(payout.bonus))} ₽</td>
+            <td><strong>${formatCurrency(Math.round(payout.total))} ₽</strong></td>
+          `;
+          payoutTable.appendChild(row);
+        });
+    }
+
+    rateForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const value = Number(rateValue.value);
+      if (Number.isNaN(value) || value < 0) return;
+      rates.set(rateRole.value, value);
+      rateValue.value = '';
+      renderRates();
+      renderShifts();
+      renderPayouts();
+    });
+
+    shiftForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!shiftDate.value || !shiftName.value || !shiftStart.value || !shiftEnd.value) return;
+
+      addShift({
+        date: shiftDate.value,
+        name: shiftName.value.trim(),
+        role: shiftRole.value,
+        start: shiftStart.value,
+        end: shiftEnd.value,
+        bonus: Number(shiftBonus.value) || 0
+      });
+
+      shiftForm.reset();
+      shiftBonus.value = 0;
+    });
+
+    resetForm.addEventListener('click', () => {
+      shiftForm.reset();
+      shiftBonus.value = 0;
+    });
+
+    // Демоданные для быстрого старта
+    addShift({ date: '2024-11-26', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
+    addShift({ date: '2024-12-01', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
+    addShift({ date: '2024-12-09', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
+    addShift({ date: '2024-12-11', name: 'Юля', role: 'Администратор', start: '11:00', end: '16:00', bonus: 0 });
+    addShift({ date: '2024-12-11', name: 'Аня', role: 'Администратор', start: '16:00', end: '23:00', bonus: 500 });
+
+    renderRates();
+  </script>
+</body>
+</html>
