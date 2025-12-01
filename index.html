@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Учёт часов и выплат</title>
+  <style>
+    :root {
+      --border: #d6d8db;
+      --primary: #1f7a8c;
+      --muted: #6c757d;
+      --bg: #f8f9fa;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: #212529;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      height: 64px;
+      width: auto;
+      border-radius: 8px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 6px 10px;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    section {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    h2 {
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 20px;
+    }
+
+    .description {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px 16px;
+      align-items: end;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    input, select, button {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      font-family: inherit;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      outline: 2px solid rgba(31, 122, 140, 0.15);
+      border-color: var(--primary);
+    }
+
+    button {
+      background: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      border: none;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(31, 122, 140, 0.25);
+    }
+
+    button.secondary {
+      background: transparent;
+      color: #212529;
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f3f5;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(odd) td {
+      background: #fcfcfd;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e8f5f7;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+      margin-top: 12px;
+    }
+
+    .stat {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fdfefe;
+    }
+
+    .stat-title {
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 4px;
+    }
+
+    .stat-value {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .totals {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    .totals strong { color: #212529; }
+
+    .pill {
+      padding: 2px 10px;
+      border-radius: 16px;
+      background: #eef0f3;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .danger { color: #c92a2a; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <img src="assets/bistro-pasta-logo.svg" alt="Bistro Pasta" class="logo" />
+      <div>
+        <h1>Учёт часов и выплат</h1>
+        <p class="subtitle">Две контрольные даты: 9 и 25 число месяца. Ставка привязана к должности, бонусы и штрафы учитываются отдельной строкой.</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="rates">
+      <h2>Настройки ставок</h2>
+      <p class="description">Введите почасовые тарифы по должностям. Любая смена с указанной должностью возьмёт соответствующую ставку.</p>
+      <form id="rateForm">
+        <label>Должность
+          <select id="rateRole" required>
+            <option value="Повар">Повар</option>
+            <option value="Администратор">Администратор</option>
+          </select>
+        </label>
+        <label>Ставка, ₽/час
+          <input id="rateValue" type="number" min="0" step="10" required />
+        </label>
+        <button type="submit">Сохранить ставку</button>
+      </form>
+      <div class="grid-two" id="rateBadges"></div>
+    </section>
+
+    <section id="shift">
+      <h2>Добавить смену</h2>
+      <p class="description">Фиксируйте дату, время, сотрудника и должность. После заполнения нажмите «Отправить данные о сотруднике» и переходите к следующему.</p>
+      <form id="shiftForm">
+        <label>Дата
+          <input type="date" id="shiftDate" required />
+        </label>
+        <label>Сотрудник
+          <input type="text" id="shiftName" placeholder="Например, Софья" required />
+        </label>
+        <label>Точка
+          <select id="shiftLocation" required>
+            <option value="Московская 4">Московская 4</option>
+            <option value="Октябрьский 104">Октябрьский 104</option>
+          </select>
+        </label>
+        <label>Должность
+          <select id="shiftRole" required>
+            <option value="Повар">Повар</option>
+            <option value="Администратор">Администратор</option>
+          </select>
+        </label>
+        <label>Начало смены
+          <input type="time" id="shiftStart" value="10:00" required />
+        </label>
+        <label>Конец смены
+          <input type="time" id="shiftEnd" value="21:00" required />
+        </label>
+        <label>Премия / штраф, ₽ (можно отрицательное)
+          <input type="number" id="shiftBonus" step="100" value="0" />
+        </label>
+        <button type="submit">Отправить данные о сотруднике</button>
+        <button type="button" class="secondary" id="resetForm">Очистить форму</button>
+      </form>
+    </section>
+
+    <section id="log">
+      <h2>Список смен</h2>
+      <div class="description">Часы считаются автоматически (пересчёт при изменении ставок). Можно удалить строку, если внесли неверные данные.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Дата</th>
+            <th>Сотрудник</th>
+            <th>Точка</th>
+            <th>Должность</th>
+            <th>Начало</th>
+            <th>Конец</th>
+            <th>Часы</th>
+            <th>Ставка</th>
+            <th>Премия/штраф</th>
+            <th>Оплата, ₽</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="shiftTable"></tbody>
+      </table>
+      <div class="totals" id="shiftTotals"></div>
+    </section>
+
+    <section id="payouts">
+      <h2>Сводка выплат</h2>
+      <p class="description">Рассчитываем по контрольным датам: 9 (за период 26 числа предыдущего месяца по 9 включительно) и 25 (за период 10–25). Суммируем часы, оплату и бонусы/штрафы по каждому сотруднику.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Сотрудник</th>
+            <th>Дата выплаты</th>
+            <th>Часы</th>
+            <th>Бонусы/штрафы</th>
+            <th>Итого к выдаче, ₽</th>
+          </tr>
+        </thead>
+        <tbody id="payoutTable"></tbody>
+      </table>
+    </section>
+
+    <section id="googleSheets">
+      <h2>Сохранение в Google Таблицы</h2>
+      <p class="description">Ниже — готовый скрипт для Google Apps Script. Он принимает JSON, добавляет строки в таблицу и создаёт лист «Payouts» для итогов. Скопируйте код, вставьте в новый проект Apps Script, нажмите Deploy → New deployment → Web app, выберите «Anyone»/«Anyone with the link», получите URL и вставьте его в форму.</p>
+      <div class="stat" style="margin-top: 10px;">
+        <p class="stat-title">Готовые данные для вставки</p>
+        <p class="description" style="margin: 0;">
+          Deployment ID: <strong>AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa</strong><br />
+          URL веб‑приложения: <a href="https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec" target="_blank" rel="noreferrer">https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec</a><br />
+          Таблица по умолчанию: <a href="https://docs.google.com/spreadsheets/d/1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c/edit?usp=sharing" target="_blank" rel="noreferrer">1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c</a><br />
+          Библиотека Apps Script: <a href="https://script.google.com/macros/library/d/1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1" target="_blank" rel="noreferrer">1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1</a>
+        </p>
+        <p class="description" style="margin: 4px 0 0;">Данные ниже сохраняются в браузере — введите один раз и больше не придётся повторять.</p>
+        <p class="description" style="margin: 4px 0 0;">Логотип для Google: <a href="assets/bistro-pasta-logo.svg" download>assets/bistro-pasta-logo.svg</a> (можно прикрепить в таблицу или на Google Диске).</p>
+      </div>
+      <div class="grid-two">
+        <div>
+          <p class="stat-title" style="margin-bottom: 8px;">Код для Google Apps Script</p>
+          <pre style="white-space: pre-wrap; background: #f8f9fa; border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.4;">
+function doGet() {
+  return ContentService.createTextOutput('OK')
+    .setMimeType(ContentService.MimeType.TEXT)
+    .setHeader('Access-Control-Allow-Origin', '*');
+}
+
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const ss = SpreadsheetApp.openById(data.spreadsheetId);
+  const sheet = ss.getSheetByName('Shifts') || ss.insertSheet('Shifts');
+  const payoutsSheet = ss.getSheetByName('Payouts') || ss.insertSheet('Payouts');
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['Дата', 'Сотрудник', 'Точка', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']);
+  }
+  if (payoutsSheet.getLastRow() === 0) {
+    payoutsSheet.appendRow(['Сотрудник', 'Дата выплаты', 'Часы', 'Бонус/штраф', 'Итого']);
+  }
+
+  const shiftRows = data.shifts.map(s => [s.date, s.name, s.location, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]);
+  const payoutRows = data.payouts.map(p => [p.name, p.payoutDate, p.hours, p.bonus, p.total]);
+
+  if (shiftRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, shiftRows.length, shiftRows[0].length).setValues(shiftRows);
+  if (payoutRows.length) payoutsSheet.getRange(payoutsSheet.getLastRow() + 1, 1, payoutRows.length, payoutRows[0].length).setValues(payoutRows);
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+          </pre>
+        </div>
+        <div>
+          <form id="googleForm" style="grid-template-columns: 1fr;">
+            <label>URL веб-приложения Apps Script
+              <input type="url" id="gsUrl" placeholder="https://script.google.com/macros/s/…/exec" required />
+            </label>
+            <label>ID таблицы (Spreadsheet ID)
+              <input type="text" id="gsSheetId" placeholder="1AbC…" required />
+            </label>
+            <button type="submit">Отправить данные в Google Таблицу</button>
+            <p class="description" id="gsStatus" style="margin: 8px 0 0;">Статус: ожидает отправки.</p>
+          </form>
+          <p class="description" style="margin-top: 12px;">Отправится вся текущая выборка: ставки, смены и расчёт выплат. При повторной отправке строки добавляются ниже существующих — очистите листы в таблице, если нужно начать заново.</p>
+        </div>
+      </div>
+      <div class="stat" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+        <p class="stat-title" style="margin: 0;">Альтернативные варианты</p>
+        <p class="description" style="margin: 0;">Если веб-приложение недоступно, можно скачать резервную копию и импортировать в Google Sheets/Excel вручную.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <button id="downloadJson" type="button">Скачать JSON</button>
+          <button id="downloadCsv" type="button" class="secondary">Скачать CSV</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const rateForm = document.getElementById('rateForm');
+    const rateRole = document.getElementById('rateRole');
+    const rateValue = document.getElementById('rateValue');
+    const rateBadges = document.getElementById('rateBadges');
+
+    const shiftForm = document.getElementById('shiftForm');
+    const shiftDate = document.getElementById('shiftDate');
+    const shiftName = document.getElementById('shiftName');
+    const shiftLocation = document.getElementById('shiftLocation');
+    const shiftRole = document.getElementById('shiftRole');
+    const shiftStart = document.getElementById('shiftStart');
+    const shiftEnd = document.getElementById('shiftEnd');
+    const shiftBonus = document.getElementById('shiftBonus');
+    const resetForm = document.getElementById('resetForm');
+
+    const shiftTable = document.getElementById('shiftTable');
+    const shiftTotals = document.getElementById('shiftTotals');
+    const payoutTable = document.getElementById('payoutTable');
+
+    const gsForm = document.getElementById('googleForm');
+    const gsUrl = document.getElementById('gsUrl');
+    const gsSheetId = document.getElementById('gsSheetId');
+    const gsStatus = document.getElementById('gsStatus');
+    const downloadJsonBtn = document.getElementById('downloadJson');
+    const downloadCsvBtn = document.getElementById('downloadCsv');
+
+    const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec';
+    const DEFAULT_SHEET_ID = '1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c';
+    const DEFAULT_DEPLOYMENT_ID = 'AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa';
+    const DEFAULT_LIBRARY_ID = '1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1';
+    const GS_STORAGE_KEY = 'bistro-gs-config';
+
+    const rates = new Map([
+      ['Повар', 270],
+      ['Администратор', 250]
+    ]);
+
+    const shifts = [];
+
+    function loadGsConfig() {
+      try {
+        return JSON.parse(localStorage.getItem(GS_STORAGE_KEY) || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveGsConfig(config) {
+      localStorage.setItem(GS_STORAGE_KEY, JSON.stringify(config));
+    }
+
+    function extractNumber(text) {
+      const cleaned = String(text).replace(/[^-\d.,]/g, '').replace(',', '.');
+      return Number(cleaned || 0);
+    }
+
+    function formatCurrency(value) {
+      return value.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+    }
+
+    function renderRates() {
+      rateBadges.innerHTML = '';
+      rates.forEach((value, role) => {
+        const card = document.createElement('div');
+        card.className = 'stat';
+        card.innerHTML = `
+          <p class="stat-title">${role}</p>
+          <p class="stat-value">${formatCurrency(value)} ₽/час</p>
+        `;
+        rateBadges.appendChild(card);
+      });
+    }
+
+    function toMinutes(time) {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function calcHours(start, end) {
+      let diff = toMinutes(end) - toMinutes(start);
+      if (diff < 0) diff += 24 * 60; // переход через полночь
+      return Math.round((diff / 60) * 100) / 100;
+    }
+
+    function determinePayout(date) {
+      const d = new Date(date);
+      const day = d.getDate();
+      const month = d.getMonth();
+      const year = d.getFullYear();
+
+      // Период 26 числа по 9 число: выплата 9 числа следующего/текущего месяца
+      if (day >= 26) {
+        const payoutDate = new Date(year, month + 1, 9);
+        return payoutDate;
+      }
+
+      if (day <= 9) {
+        const payoutDate = new Date(year, month, 9);
+        return payoutDate;
+      }
+
+      // Иначе период 10-25 -> выплата 25 числа текущего месяца
+      return new Date(year, month, 25);
+    }
+
+    function addShift(entry) {
+      shifts.push(entry);
+      renderShifts();
+      renderPayouts();
+    }
+
+    function deleteShift(index) {
+      shifts.splice(index, 1);
+      renderShifts();
+      renderPayouts();
+    }
+
+    function renderShifts() {
+      shiftTable.innerHTML = '';
+      let totalHours = 0;
+      let totalPay = 0;
+
+      shifts.forEach((shift, index) => {
+        const hours = calcHours(shift.start, shift.end);
+        const rate = rates.get(shift.role) || 0;
+        const pay = Math.round(hours * rate + Number(shift.bonus));
+
+        totalHours += hours;
+        totalPay += pay;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${shift.date}</td>
+          <td>${shift.name}</td>
+          <td>${shift.location}</td>
+          <td><span class="chip">${shift.role}</span></td>
+          <td>${shift.start}</td>
+          <td>${shift.end}</td>
+          <td>${hours.toFixed(2)}</td>
+          <td>${formatCurrency(rate)} ₽</td>
+          <td class="${shift.bonus < 0 ? 'danger' : ''}">${formatCurrency(Number(shift.bonus))} ₽</td>
+          <td>${formatCurrency(pay)} ₽</td>
+          <td><button class="secondary" onclick="deleteShift(${index})">Удалить</button></td>
+        `;
+        shiftTable.appendChild(row);
+      });
+
+      shiftTotals.innerHTML = `
+        <span class="pill">Смен: ${shifts.length}</span>
+        <span><strong>${totalHours.toFixed(2)}</strong> ч</span>
+        <span><strong>${formatCurrency(Math.round(totalPay))}</strong> ₽ всего</span>
+      `;
+    }
+
+    function renderPayouts() {
+      const payouts = new Map();
+
+      shifts.forEach((shift) => {
+        const hours = calcHours(shift.start, shift.end);
+        const rate = rates.get(shift.role) || 0;
+        const base = hours * rate;
+        const bonus = Number(shift.bonus) || 0;
+        const total = base + bonus;
+
+        const payoutDate = determinePayout(shift.date);
+        const key = `${shift.name}|${payoutDate.toISOString().slice(0, 10)}`;
+
+        if (!payouts.has(key)) {
+          payouts.set(key, {
+            name: shift.name,
+            payoutDate,
+            hours: 0,
+            bonus: 0,
+            total: 0
+          });
+        }
+
+        const agg = payouts.get(key);
+        agg.hours += hours;
+        agg.bonus += bonus;
+        agg.total += total;
+      });
+
+      payoutTable.innerHTML = '';
+
+      Array.from(payouts.values())
+        .sort((a, b) => a.payoutDate - b.payoutDate || a.name.localeCompare(b.name))
+        .forEach((payout) => {
+          const row = document.createElement('tr');
+          const payoutLabel = payout.payoutDate.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          });
+          row.innerHTML = `
+            <td>${payout.name}</td>
+            <td>${payoutLabel}</td>
+            <td>${payout.hours.toFixed(2)} ч</td>
+            <td class="${payout.bonus < 0 ? 'danger' : ''}">${formatCurrency(Math.round(payout.bonus))} ₽</td>
+            <td><strong>${formatCurrency(Math.round(payout.total))} ₽</strong></td>
+          `;
+          payoutTable.appendChild(row);
+        });
+    }
+
+    function collectData() {
+      const payoutItems = [];
+      payoutTable.querySelectorAll('tr').forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 0) return;
+        payoutItems.push({
+          name: cells[0].textContent,
+          payoutDate: cells[1].textContent,
+          hours: extractNumber(cells[2].textContent),
+          bonus: extractNumber(cells[3].textContent),
+          total: extractNumber(cells[4].textContent)
+        });
+      });
+
+      const shiftItems = shifts.map((shift) => {
+        const hours = calcHours(shift.start, shift.end);
+        const rate = rates.get(shift.role) || 0;
+        const pay = Math.round(hours * rate + Number(shift.bonus));
+        return { ...shift, hours, rate, pay };
+      });
+
+      const rateItems = Array.from(rates.entries()).map(([role, value]) => ({ role, value }));
+
+      return { shifts: shiftItems, payouts: payoutItems, rates: rateItems };
+    }
+
+    function downloadFile(filename, content, mime = 'text/plain') {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson() {
+      const payload = collectData();
+      downloadFile('shifts-and-payouts.json', JSON.stringify(payload, null, 2), 'application/json');
+      gsStatus.textContent = 'Статус: скачан JSON для ручной загрузки.';
+    }
+
+    function toCsvRow(values) {
+      return values.map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',');
+    }
+
+    function downloadCsv() {
+      const payload = collectData();
+      const lines = [];
+
+      lines.push('Shifts');
+      lines.push(toCsvRow(['Дата', 'Сотрудник', 'Точка', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']));
+      payload.shifts.forEach((s) => {
+        lines.push(toCsvRow([s.date, s.name, s.location, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]));
+      });
+      lines.push('');
+      lines.push('Payouts');
+      lines.push(toCsvRow(['Сотрудник', 'Дата выплаты', 'Часы', 'Бонус/штраф', 'Итого']));
+      payload.payouts.forEach((p) => {
+        lines.push(toCsvRow([p.name, p.payoutDate, p.hours, p.bonus, p.total]));
+      });
+
+      downloadFile('shifts-and-payouts.csv', lines.join('\n'), 'text/csv');
+      gsStatus.textContent = 'Статус: скачан CSV для ручной загрузки.';
+    }
+
+    async function ensureDoGetAvailable(url) {
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error(`GET ${response.status}`);
+      const text = (await response.text()).trim();
+      if (!text) throw new Error('пустой ответ — doGet может быть не развернут');
+      if (!/ok/i.test(text)) {
+        throw new Error('ответ doGet не содержит OK — опубликуйте новую версию веб-приложения c doGet');
+      }
+    }
+
+    async function sendToGoogleSheets(event) {
+      event.preventDefault();
+      if (!gsUrl.value || !gsSheetId.value) return;
+
+      gsStatus.textContent = 'Статус: проверяем doGet…';
+
+      const payload = collectData();
+      const url = gsUrl.value.trim();
+      const spreadsheetId = gsSheetId.value.trim();
+      payload.spreadsheetId = spreadsheetId;
+
+      saveGsConfig({
+        url,
+        sheetId: spreadsheetId,
+        deploymentId: DEFAULT_DEPLOYMENT_ID,
+        libraryId: DEFAULT_LIBRARY_ID
+      });
+
+      try {
+        await ensureDoGetAvailable(url);
+        gsStatus.textContent = 'Статус: отправляем…';
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        gsStatus.textContent = json.ok ? 'Статус: отправлено успешно.' : 'Статус: есть ответ, но без ok=true.';
+      } catch (error) {
+        const tips = 'Проверьте, что вы вставили весь код (включая doGet), нажали Deploy → New deployment (Web app) и выбрали доступ Anyone/Anyone with the link.';
+        const maybeExec = gsUrl.value.includes('/dev') || gsUrl.value.endsWith('/deploy');
+        const suffix = maybeExec ? ' (убедитесь, что ссылка заканчивается на /exec)' : '';
+        gsStatus.textContent = `Статус: ошибка (${error.message}). ${tips}${suffix}`;
+      }
+    }
+
+    rateForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const value = Number(rateValue.value);
+      if (Number.isNaN(value) || value < 0) return;
+      rates.set(rateRole.value, value);
+      rateValue.value = '';
+      renderRates();
+      renderShifts();
+      renderPayouts();
+    });
+
+    shiftForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!shiftDate.value || !shiftName.value || !shiftStart.value || !shiftEnd.value) return;
+
+      addShift({
+        date: shiftDate.value,
+        name: shiftName.value.trim(),
+        location: shiftLocation.value,
+        role: shiftRole.value,
+        start: shiftStart.value,
+        end: shiftEnd.value,
+        bonus: Number(shiftBonus.value) || 0
+      });
+
+      shiftForm.reset();
+      shiftBonus.value = 0;
+    });
+
+    resetForm.addEventListener('click', () => {
+      shiftForm.reset();
+      shiftBonus.value = 0;
+    });
+
+    gsForm.addEventListener('submit', sendToGoogleSheets);
+    downloadJsonBtn.addEventListener('click', downloadJson);
+    downloadCsvBtn.addEventListener('click', downloadCsv);
+
+    // Предзаполняем и храним доступы (значения сохраняются в localStorage)
+    const savedGs = loadGsConfig();
+    gsUrl.value = savedGs.url || DEFAULT_GS_URL;
+    gsSheetId.value = savedGs.sheetId || DEFAULT_SHEET_ID;
+    if (!savedGs.url || !savedGs.sheetId) {
+      saveGsConfig({
+        url: gsUrl.value,
+        sheetId: gsSheetId.value,
+        deploymentId: DEFAULT_DEPLOYMENT_ID,
+        libraryId: DEFAULT_LIBRARY_ID
+      });
+    }
+
+    gsUrl.addEventListener('change', () => saveGsConfig({
+      url: gsUrl.value.trim() || DEFAULT_GS_URL,
+      sheetId: gsSheetId.value.trim() || DEFAULT_SHEET_ID,
+      deploymentId: DEFAULT_DEPLOYMENT_ID,
+      libraryId: DEFAULT_LIBRARY_ID
+    }));
+
+    gsSheetId.addEventListener('change', () => saveGsConfig({
+      url: gsUrl.value.trim() || DEFAULT_GS_URL,
+      sheetId: gsSheetId.value.trim() || DEFAULT_SHEET_ID,
+      deploymentId: DEFAULT_DEPLOYMENT_ID,
+      libraryId: DEFAULT_LIBRARY_ID
+    }));
+
+    // Демоданные для быстрого старта
+    addShift({ date: '2024-11-26', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
+    addShift({ date: '2024-12-01', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
+    addShift({ date: '2024-12-09', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
+    addShift({ date: '2024-12-11', name: 'Юля', role: 'Администратор', start: '11:00', end: '16:00', bonus: 0 });
+    addShift({ date: '2024-12-11', name: 'Аня', role: 'Администратор', start: '16:00', end: '23:00', bonus: 500 });
+
+    renderRates();
+  </script>
+</body>
+</html>
