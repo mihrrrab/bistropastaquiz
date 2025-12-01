@@ -302,6 +302,52 @@
         <tbody id="payoutTable"></tbody>
       </table>
     </section>
+
+    <section id="googleSheets">
+      <h2>Сохранение в Google Таблицы</h2>
+      <p class="description">Ниже — готовый скрипт для Google Apps Script. Он принимает JSON, добавляет строки в таблицу и создаёт лист «Payouts» для итогов. Скопируйте код, вставьте в новый проект Apps Script, нажмите Deploy → New deployment → Web app, выберите «Anyone»/«Anyone with the link», получите URL и вставьте его в форму.</p>
+      <div class="grid-two">
+        <div>
+          <p class="stat-title" style="margin-bottom: 8px;">Код для Google Apps Script</p>
+          <pre style="white-space: pre-wrap; background: #f8f9fa; border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.4;">
+function doPost(e) {
+  const data = JSON.parse(e.postData.contents);
+  const ss = SpreadsheetApp.openById(data.spreadsheetId);
+  const sheet = ss.getSheetByName('Shifts') || ss.insertSheet('Shifts');
+  const payoutsSheet = ss.getSheetByName('Payouts') || ss.insertSheet('Payouts');
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(['Дата', 'Сотрудник', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']);
+  }
+  if (payoutsSheet.getLastRow() === 0) {
+    payoutsSheet.appendRow(['Сотрудник', 'Дата выплаты', 'Часы', 'Бонус/штраф', 'Итого']);
+  }
+
+  const shiftRows = data.shifts.map(s => [s.date, s.name, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]);
+  const payoutRows = data.payouts.map(p => [p.name, p.payoutDate, p.hours, p.bonus, p.total]);
+
+  if (shiftRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, shiftRows.length, shiftRows[0].length).setValues(shiftRows);
+  if (payoutRows.length) payoutsSheet.getRange(payoutsSheet.getLastRow() + 1, 1, payoutRows.length, payoutRows[0].length).setValues(payoutRows);
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+}
+          </pre>
+        </div>
+        <div>
+          <form id="googleForm" style="grid-template-columns: 1fr;">
+            <label>URL веб-приложения Apps Script
+              <input type="url" id="gsUrl" placeholder="https://script.google.com/macros/s/…/exec" required />
+            </label>
+            <label>ID таблицы (Spreadsheet ID)
+              <input type="text" id="gsSheetId" placeholder="1AbC…" required />
+            </label>
+            <button type="submit">Отправить данные в Google Таблицу</button>
+            <p class="description" id="gsStatus" style="margin: 8px 0 0;">Статус: ожидает отправки.</p>
+          </form>
+          <p class="description" style="margin-top: 12px;">Отправится вся текущая выборка: ставки, смены и расчёт выплат. При повторной отправке строки добавляются ниже существующих — очистите листы в таблице, если нужно начать заново.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -323,12 +369,22 @@
     const shiftTotals = document.getElementById('shiftTotals');
     const payoutTable = document.getElementById('payoutTable');
 
+    const gsForm = document.getElementById('googleForm');
+    const gsUrl = document.getElementById('gsUrl');
+    const gsSheetId = document.getElementById('gsSheetId');
+    const gsStatus = document.getElementById('gsStatus');
+
     const rates = new Map([
       ['Повар', 270],
       ['Администратор', 250]
     ]);
 
     const shifts = [];
+
+    function extractNumber(text) {
+      const cleaned = String(text).replace(/[^-\d.,]/g, '').replace(',', '.');
+      return Number(cleaned || 0);
+    }
 
     function formatCurrency(value) {
       return value.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
@@ -479,6 +535,56 @@
         });
     }
 
+    function collectData() {
+      const payoutItems = [];
+      payoutTable.querySelectorAll('tr').forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length === 0) return;
+        payoutItems.push({
+          name: cells[0].textContent,
+          payoutDate: cells[1].textContent,
+          hours: extractNumber(cells[2].textContent),
+          bonus: extractNumber(cells[3].textContent),
+          total: extractNumber(cells[4].textContent)
+        });
+      });
+
+      const shiftItems = shifts.map((shift) => {
+        const hours = calcHours(shift.start, shift.end);
+        const rate = rates.get(shift.role) || 0;
+        const pay = Math.round(hours * rate + Number(shift.bonus));
+        return { ...shift, hours, rate, pay };
+      });
+
+      const rateItems = Array.from(rates.entries()).map(([role, value]) => ({ role, value }));
+
+      return { shifts: shiftItems, payouts: payoutItems, rates: rateItems };
+    }
+
+    async function sendToGoogleSheets(event) {
+      event.preventDefault();
+      if (!gsUrl.value || !gsSheetId.value) return;
+
+      gsStatus.textContent = 'Статус: отправляем…';
+
+      const payload = collectData();
+      payload.spreadsheetId = gsSheetId.value.trim();
+
+      try {
+        const response = await fetch(gsUrl.value, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const json = await response.json();
+        gsStatus.textContent = json.ok ? 'Статус: отправлено успешно.' : 'Статус: есть ответ, но без ok=true.';
+      } catch (error) {
+        gsStatus.textContent = `Статус: ошибка отправки (${error.message}).`;
+      }
+    }
+
     rateForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const value = Number(rateValue.value);
@@ -511,6 +617,8 @@
       shiftForm.reset();
       shiftBonus.value = 0;
     });
+
+    gsForm.addEventListener('submit', sendToGoogleSheets);
 
     // Демоданные для быстрого старта
     addShift({ date: '2024-11-26', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
