@@ -29,6 +29,24 @@
       z-index: 10;
     }
 
+    .header-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      height: 64px;
+      width: auto;
+      border-radius: 8px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 6px 10px;
+    }
+
     h1 {
       margin: 0 0 4px;
       font-size: 24px;
@@ -209,8 +227,13 @@
 </head>
 <body>
   <header>
-    <h1>Учёт часов и выплат</h1>
-    <p class="subtitle">Две контрольные даты: 9 и 25 число месяца. Ставка привязана к должности, бонусы и штрафы учитываются отдельной строкой.</p>
+    <div class="header-inner">
+      <img src="assets/bistro-pasta-logo.svg" alt="Bistro Pasta" class="logo" />
+      <div>
+        <h1>Учёт часов и выплат</h1>
+        <p class="subtitle">Две контрольные даты: 9 и 25 число месяца. Ставка привязана к должности, бонусы и штрафы учитываются отдельной строкой.</p>
+      </div>
+    </div>
   </header>
 
   <main>
@@ -234,7 +257,7 @@
 
     <section id="shift">
       <h2>Добавить смену</h2>
-      <p class="description">Фиксируйте дату, время, сотрудника и должность. Автоматически рассчитаем часы и оплату.</p>
+      <p class="description">Фиксируйте дату, время, сотрудника и должность. После заполнения нажмите «Отправить данные о сотруднике» и переходите к следующему.</p>
       <form id="shiftForm">
         <label>Дата
           <input type="date" id="shiftDate" required />
@@ -257,7 +280,7 @@
         <label>Премия / штраф, ₽ (можно отрицательное)
           <input type="number" id="shiftBonus" step="100" value="0" />
         </label>
-        <button type="submit">Добавить</button>
+        <button type="submit">Отправить данные о сотруднике</button>
         <button type="button" class="secondary" id="resetForm">Очистить форму</button>
       </form>
     </section>
@@ -314,11 +337,19 @@
           Таблица по умолчанию: <a href="https://docs.google.com/spreadsheets/d/1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c/edit?usp=sharing" target="_blank" rel="noreferrer">1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c</a><br />
           Библиотека Apps Script: <a href="https://script.google.com/macros/library/d/1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1" target="_blank" rel="noreferrer">1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1</a>
         </p>
+        <p class="description" style="margin: 4px 0 0;">Данные ниже сохраняются в браузере — введите один раз и больше не придётся повторять.</p>
+        <p class="description" style="margin: 4px 0 0;">Логотип для Google: <a href="assets/bistro-pasta-logo.svg" download>assets/bistro-pasta-logo.svg</a> (можно прикрепить в таблицу или на Google Диске).</p>
       </div>
       <div class="grid-two">
         <div>
           <p class="stat-title" style="margin-bottom: 8px;">Код для Google Apps Script</p>
           <pre style="white-space: pre-wrap; background: #f8f9fa; border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.4;">
+function doGet() {
+  return ContentService.createTextOutput('OK')
+    .setMimeType(ContentService.MimeType.TEXT)
+    .setHeader('Access-Control-Allow-Origin', '*');
+}
+
 function doPost(e) {
   const data = JSON.parse(e.postData.contents);
   const ss = SpreadsheetApp.openById(data.spreadsheetId);
@@ -398,6 +429,9 @@ function doPost(e) {
 
     const DEFAULT_GS_URL = 'https://script.google.com/macros/s/AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa/exec';
     const DEFAULT_SHEET_ID = '1G9vTG88ulHiGCg_I3WTklZQbvv7iJYrQd5TWA0KYz1c';
+    const DEFAULT_DEPLOYMENT_ID = 'AKfycbw-wxoYTG55RR7SR68z_ORZEI9hSjw_TUDBDBH-fHmGNh4KOrTp4b4ExKXOdTz30lDa';
+    const DEFAULT_LIBRARY_ID = '1TTYL1bJGoazaYxyQTuaYjLytmZll4jDsdG7krCdLsYgMTXXipT-j6YMW/1';
+    const GS_STORAGE_KEY = 'bistro-gs-config';
 
     const rates = new Map([
       ['Повар', 270],
@@ -405,6 +439,18 @@ function doPost(e) {
     ]);
 
     const shifts = [];
+
+    function loadGsConfig() {
+      try {
+        return JSON.parse(localStorage.getItem(GS_STORAGE_KEY) || '{}');
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveGsConfig(config) {
+      localStorage.setItem(GS_STORAGE_KEY, JSON.stringify(config));
+    }
 
     function extractNumber(text) {
       const cleaned = String(text).replace(/[^-\d.,]/g, '').replace(',', '.');
@@ -633,10 +679,19 @@ function doPost(e) {
       gsStatus.textContent = 'Статус: отправляем…';
 
       const payload = collectData();
-      payload.spreadsheetId = gsSheetId.value.trim();
+      const url = gsUrl.value.trim();
+      const spreadsheetId = gsSheetId.value.trim();
+      payload.spreadsheetId = spreadsheetId;
+
+      saveGsConfig({
+        url,
+        sheetId: spreadsheetId,
+        deploymentId: DEFAULT_DEPLOYMENT_ID,
+        libraryId: DEFAULT_LIBRARY_ID
+      });
 
       try {
-        const response = await fetch(gsUrl.value, {
+        const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
@@ -690,9 +745,32 @@ function doPost(e) {
     downloadJsonBtn.addEventListener('click', downloadJson);
     downloadCsvBtn.addEventListener('click', downloadCsv);
 
-    // Предзаполняем доступы по умолчанию
-    gsUrl.value = DEFAULT_GS_URL;
-    gsSheetId.value = DEFAULT_SHEET_ID;
+    // Предзаполняем и храним доступы (значения сохраняются в localStorage)
+    const savedGs = loadGsConfig();
+    gsUrl.value = savedGs.url || DEFAULT_GS_URL;
+    gsSheetId.value = savedGs.sheetId || DEFAULT_SHEET_ID;
+    if (!savedGs.url || !savedGs.sheetId) {
+      saveGsConfig({
+        url: gsUrl.value,
+        sheetId: gsSheetId.value,
+        deploymentId: DEFAULT_DEPLOYMENT_ID,
+        libraryId: DEFAULT_LIBRARY_ID
+      });
+    }
+
+    gsUrl.addEventListener('change', () => saveGsConfig({
+      url: gsUrl.value.trim() || DEFAULT_GS_URL,
+      sheetId: gsSheetId.value.trim() || DEFAULT_SHEET_ID,
+      deploymentId: DEFAULT_DEPLOYMENT_ID,
+      libraryId: DEFAULT_LIBRARY_ID
+    }));
+
+    gsSheetId.addEventListener('change', () => saveGsConfig({
+      url: gsUrl.value.trim() || DEFAULT_GS_URL,
+      sheetId: gsSheetId.value.trim() || DEFAULT_SHEET_ID,
+      deploymentId: DEFAULT_DEPLOYMENT_ID,
+      libraryId: DEFAULT_LIBRARY_ID
+    }));
 
     // Демоданные для быстрого старта
     addShift({ date: '2024-11-26', name: 'Софья', role: 'Повар', start: '10:00', end: '20:00', bonus: 0 });
