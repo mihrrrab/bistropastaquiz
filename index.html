@@ -329,7 +329,10 @@ function doPost(e) {
   if (shiftRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, shiftRows.length, shiftRows[0].length).setValues(shiftRows);
   if (payoutRows.length) payoutsSheet.getRange(payoutsSheet.getLastRow() + 1, 1, payoutRows.length, payoutRows[0].length).setValues(payoutRows);
 
-  return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+  return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+    .setMimeType(ContentService.MimeType.JSON)
+    .setHeader('Access-Control-Allow-Origin', '*')
+    .setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
           </pre>
         </div>
@@ -573,7 +576,7 @@ function doPost(e) {
       try {
         const response = await fetch(gsUrl.value, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
         });
 
@@ -581,7 +584,10 @@ function doPost(e) {
         const json = await response.json();
         gsStatus.textContent = json.ok ? 'Статус: отправлено успешно.' : 'Статус: есть ответ, но без ok=true.';
       } catch (error) {
-        gsStatus.textContent = `Статус: ошибка отправки (${error.message}).`;
+        const tips = 'Проверьте, что вы взяли URL из Deploy → New deployment (тип Web app) и выбрали доступ Anyone/Anyone with the link.';
+        const maybeExec = gsUrl.value.includes('/dev') || gsUrl.value.endsWith('/deploy');
+        const suffix = maybeExec ? ' (убедитесь, что ссылка заканчивается на /exec)' : '';
+        gsStatus.textContent = `Статус: ошибка отправки (${error.message}). ${tips}${suffix}`;
       }
     }
 
