@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Бистро Паста — навигатор заказа</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div class="hero__content">
+      <p class="hero__label">Бистро Паста</p>
+      <h1>Выберите блюдо и филиал — мы соберём заказ и свяжемся с вами</h1>
+      <p class="hero__subtext">Два сценария: быстрое меню или короткий дружелюбный квиз по настроению.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section id="startScreen" class="panel">
+      <h2>Как удобнее выбрать?</h2>
+      <div class="options-grid">
+        <button id="knowChoiceBtn" class="option-card">
+          <h3>Я знаю, что хочу</h3>
+          <p>Открыть онлайн-меню с ценами и описаниями блюд.</p>
+        </button>
+        <button id="moodChoiceBtn" class="option-card option-card--accent">
+          <h3>Хочу сделать выбор по настроению</h3>
+          <p>Пройти квиз из 5 простых вопросов и получить подборку блюд.</p>
+        </button>
+      </div>
+    </section>
+
+    <section id="menuScreen" class="panel hidden">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Онлайн-меню</p>
+          <h2>Выберите блюда</h2>
+          <p class="muted">Добавляйте позиции, чтобы перейти к выбору филиала.</p>
+        </div>
+        <button class="ghost" id="backToStartFromMenu">Назад</button>
+      </div>
+      <div id="menuList" class="cards"></div>
+      <div class="panel__actions">
+        <div id="selectedCounter" class="badge">0 блюд</div>
+        <button id="toBranchFromMenu" class="primary" disabled>Перейти к выбору филиала</button>
+      </div>
+    </section>
+
+    <section id="quizScreen" class="panel hidden">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Квиз по настроению</p>
+          <h2 id="quizTitle">Вопрос 1</h2>
+          <p class="muted">Всего 5 дружелюбных вопросов.</p>
+        </div>
+        <button class="ghost" id="backToStartFromQuiz">Назад</button>
+      </div>
+      <div id="quizQuestion" class="quiz"></div>
+    </section>
+
+    <section id="quizResultScreen" class="panel hidden">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Результат квиза</p>
+          <h2>Мы подобрали для вас</h2>
+          <p class="muted">Проверьте подборку: можно снять выделение, если блюдо не нужно.</p>
+        </div>
+        <button class="ghost" id="backToQuiz">Назад к вопросам</button>
+      </div>
+      <div id="suggestions" class="cards"></div>
+      <div class="panel__actions">
+        <button id="acceptSuggestions" class="primary">Да, мне подходит</button>
+        <button id="declineSuggestions" class="ghost">Нет, выберу сам</button>
+      </div>
+    </section>
+
+    <section id="branchScreen" class="panel hidden">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Выбор филиала</p>
+          <h2>Где заберёте заказ?</h2>
+          <p class="muted">Выберите удобный адрес макароношной Бистро Паста.</p>
+        </div>
+        <button class="ghost" id="backToMenu">Назад к меню</button>
+      </div>
+      <div class="branch-list" id="branchList"></div>
+      <div class="panel__actions">
+        <button id="toConfirm" class="primary" disabled>Перейти к подтверждению</button>
+      </div>
+    </section>
+
+    <section id="confirmScreen" class="panel hidden">
+      <div class="panel__header">
+        <div>
+          <p class="eyebrow">Подтверждение заказа</p>
+          <h2>Проверьте блюда и оставьте контакт</h2>
+        </div>
+        <button class="ghost" id="backToBranch">Назад</button>
+      </div>
+
+      <div class="summary">
+        <div>
+          <p class="eyebrow">Филиал</p>
+          <p id="confirmBranch" class="muted"></p>
+        </div>
+        <div>
+          <p class="eyebrow">Вы выбрали</p>
+          <ul id="confirmItems" class="summary__list"></ul>
+          <p id="confirmTotal" class="total"></p>
+        </div>
+      </div>
+
+      <div class="contact">
+        <label for="phoneInput">Номер телефона для связи</label>
+        <div class="input-row">
+          <input id="phoneInput" type="tel" value="+7" inputmode="tel" placeholder="+7XXXXXXXXXX" />
+          <button id="confirmOrder" class="primary" disabled>Подтвердить заказ</button>
+        </div>
+        <p id="phoneHint" class="muted">Введите номер в федеральном формате, пример: +7XXXXXXXXXX</p>
+      </div>
+      <div id="statusMessage" class="status hidden"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
