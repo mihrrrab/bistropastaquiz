@@ -265,6 +265,12 @@
         <label>Сотрудник
           <input type="text" id="shiftName" placeholder="Например, Софья" required />
         </label>
+        <label>Точка
+          <select id="shiftLocation" required>
+            <option value="Московская 4">Московская 4</option>
+            <option value="Октябрьский 104">Октябрьский 104</option>
+          </select>
+        </label>
         <label>Должность
           <select id="shiftRole" required>
             <option value="Повар">Повар</option>
@@ -272,10 +278,10 @@
           </select>
         </label>
         <label>Начало смены
-          <input type="time" id="shiftStart" required />
+          <input type="time" id="shiftStart" value="10:00" required />
         </label>
         <label>Конец смены
-          <input type="time" id="shiftEnd" required />
+          <input type="time" id="shiftEnd" value="21:00" required />
         </label>
         <label>Премия / штраф, ₽ (можно отрицательное)
           <input type="number" id="shiftBonus" step="100" value="0" />
@@ -294,6 +300,7 @@
             <th>#</th>
             <th>Дата</th>
             <th>Сотрудник</th>
+            <th>Точка</th>
             <th>Должность</th>
             <th>Начало</th>
             <th>Конец</th>
@@ -357,13 +364,13 @@ function doPost(e) {
   const payoutsSheet = ss.getSheetByName('Payouts') || ss.insertSheet('Payouts');
 
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(['Дата', 'Сотрудник', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']);
+    sheet.appendRow(['Дата', 'Сотрудник', 'Точка', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']);
   }
   if (payoutsSheet.getLastRow() === 0) {
     payoutsSheet.appendRow(['Сотрудник', 'Дата выплаты', 'Часы', 'Бонус/штраф', 'Итого']);
   }
 
-  const shiftRows = data.shifts.map(s => [s.date, s.name, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]);
+  const shiftRows = data.shifts.map(s => [s.date, s.name, s.location, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]);
   const payoutRows = data.payouts.map(p => [p.name, p.payoutDate, p.hours, p.bonus, p.total]);
 
   if (shiftRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, shiftRows.length, shiftRows[0].length).setValues(shiftRows);
@@ -410,6 +417,7 @@ function doPost(e) {
     const shiftForm = document.getElementById('shiftForm');
     const shiftDate = document.getElementById('shiftDate');
     const shiftName = document.getElementById('shiftName');
+    const shiftLocation = document.getElementById('shiftLocation');
     const shiftRole = document.getElementById('shiftRole');
     const shiftStart = document.getElementById('shiftStart');
     const shiftEnd = document.getElementById('shiftEnd');
@@ -536,6 +544,7 @@ function doPost(e) {
           <td>${index + 1}</td>
           <td>${shift.date}</td>
           <td>${shift.name}</td>
+          <td>${shift.location}</td>
           <td><span class="chip">${shift.role}</span></td>
           <td>${shift.start}</td>
           <td>${shift.end}</td>
@@ -657,9 +666,9 @@ function doPost(e) {
       const lines = [];
 
       lines.push('Shifts');
-      lines.push(toCsvRow(['Дата', 'Сотрудник', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']));
+      lines.push(toCsvRow(['Дата', 'Сотрудник', 'Точка', 'Должность', 'Начало', 'Конец', 'Часы', 'Ставка', 'Бонус/штраф', 'Оплата']));
       payload.shifts.forEach((s) => {
-        lines.push(toCsvRow([s.date, s.name, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]));
+        lines.push(toCsvRow([s.date, s.name, s.location, s.role, s.start, s.end, s.hours, s.rate, s.bonus, s.pay]));
       });
       lines.push('');
       lines.push('Payouts');
@@ -672,11 +681,21 @@ function doPost(e) {
       gsStatus.textContent = 'Статус: скачан CSV для ручной загрузки.';
     }
 
+    async function ensureDoGetAvailable(url) {
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error(`GET ${response.status}`);
+      const text = (await response.text()).trim();
+      if (!text) throw new Error('пустой ответ — doGet может быть не развернут');
+      if (!/ok/i.test(text)) {
+        throw new Error('ответ doGet не содержит OK — опубликуйте новую версию веб-приложения c doGet');
+      }
+    }
+
     async function sendToGoogleSheets(event) {
       event.preventDefault();
       if (!gsUrl.value || !gsSheetId.value) return;
 
-      gsStatus.textContent = 'Статус: отправляем…';
+      gsStatus.textContent = 'Статус: проверяем doGet…';
 
       const payload = collectData();
       const url = gsUrl.value.trim();
@@ -691,6 +710,9 @@ function doPost(e) {
       });
 
       try {
+        await ensureDoGetAvailable(url);
+        gsStatus.textContent = 'Статус: отправляем…';
+
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -701,10 +723,10 @@ function doPost(e) {
         const json = await response.json();
         gsStatus.textContent = json.ok ? 'Статус: отправлено успешно.' : 'Статус: есть ответ, но без ok=true.';
       } catch (error) {
-        const tips = 'Проверьте, что вы взяли URL из Deploy → New deployment (тип Web app) и выбрали доступ Anyone/Anyone with the link.';
+        const tips = 'Проверьте, что вы вставили весь код (включая doGet), нажали Deploy → New deployment (Web app) и выбрали доступ Anyone/Anyone with the link.';
         const maybeExec = gsUrl.value.includes('/dev') || gsUrl.value.endsWith('/deploy');
         const suffix = maybeExec ? ' (убедитесь, что ссылка заканчивается на /exec)' : '';
-        gsStatus.textContent = `Статус: ошибка отправки (${error.message}). ${tips}${suffix}`;
+        gsStatus.textContent = `Статус: ошибка (${error.message}). ${tips}${suffix}`;
       }
     }
 
@@ -726,6 +748,7 @@ function doPost(e) {
       addShift({
         date: shiftDate.value,
         name: shiftName.value.trim(),
+        location: shiftLocation.value,
         role: shiftRole.value,
         start: shiftStart.value,
         end: shiftEnd.value,
